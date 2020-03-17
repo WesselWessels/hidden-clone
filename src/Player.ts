@@ -23,7 +23,7 @@ export interface PlayerPosition {
 }
 
 export const PLAYER_WIDTH = 35;
-export const PLAYER_HEIGHT = 2 * PLAYER_WIDTH;
+export const PLAYER_HEIGHT = 1.333 * PLAYER_WIDTH;
 const cos45 = 0.7071067;
 const player = require('./assets/character_malePerson_walk0.png');
 const playerAttack = require('./assets/character_malePerson_attack0.png');
@@ -107,8 +107,8 @@ export class Player {
     
 
     this.playerPosition = {
-      x: Math.random() * this.canvas.width,
-      y: Math.random() * this.canvas.height
+      x: Math.random() * (this.canvas.width - PLAYER_WIDTH),
+      y: Math.random() * (this.canvas.height - PLAYER_HEIGHT)
     }
   }
 
@@ -267,13 +267,15 @@ export class Player {
   }
 
   draw() {
+    let playerImage = this.getCurrentPlayerImage();
     if(this.playerDirection == PlayerDirection.LEFT || this.playerDirection == PlayerDirection.DOWN_LEFT || this.playerDirection == PlayerDirection.TOP_LEFT) {
       this.ctx.save();
       this.ctx.scale(-1,1);
-      this.ctx.drawImage(this.getCurrentPlayerImage(), -1 * this.playerPosition.x, this.playerPosition.y, -1 * PLAYER_WIDTH, PLAYER_HEIGHT);
+      this.ctx.drawImage(playerImage, -1 * this.playerPosition.x, this.playerPosition.y - 5, -1 * PLAYER_WIDTH, PLAYER_HEIGHT);
       this.ctx.restore();
     } else {
-      this.ctx.drawImage(this.getCurrentPlayerImage(), this.playerPosition.x, this.playerPosition.y, PLAYER_WIDTH, PLAYER_HEIGHT);
+      // this.ctx.fillRect(this.playerPosition.x, this.playerPosition.y, PLAYER_WIDTH, PLAYER_HEIGHT);
+      this.ctx.drawImage(playerImage, this.playerPosition.x, this.playerPosition.y - 5, PLAYER_WIDTH, PLAYER_HEIGHT);
     }
     
   }

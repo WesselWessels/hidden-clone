@@ -22,7 +22,7 @@ export class Game {
     this.players = [];
     this.towers = [];
     this.numberOfBots = numberOfBots;
-    this.gameDuration = 20 * 1000;
+    this.gameDuration = 2 * 60 * 1000;
     this.timeLeft = this.gameDuration;
     this.isActive = true;
 
@@ -78,7 +78,15 @@ export class Game {
       this.previousTime = 0;
     }
     let difference = time - this.previousTime;
+    if(difference < 1000/30) {
+      console.log("Skipping");
+      window.requestAnimationFrame(this.drawCurrentGameState.bind(this));
+      return;
+    }
     this.previousTime = time;
+    if(!this.isActive) {
+      return;
+    }
     this.clearCanvas();
     this.towers.forEach((tower: Tower) => {
       tower.draw();
@@ -95,6 +103,22 @@ export class Game {
     this.timeLeft = this.gameDuration  - time;
     if(this.timeLeft < 0) {
       this.timeLeft = 0;
+      if(this.isActive) {
+        let winningPlayer;
+        this.players.forEach((player) => {
+          if(player.human) {
+            if(!winningPlayer) {
+              winningPlayer = player;
+            } else {
+              if(player.score > winningPlayer.score) {
+                winningPlayer = player;
+              }
+            }
+          }
+        });
+        this.printWinner(winningPlayer)
+      }
+      this.isActive = false;
     }
     this.printScores();
 
@@ -121,6 +145,11 @@ export class Game {
     this.ctx.fillText(displayScore.toString() , 10, 30);
   }
 
+  printWinner(player: Player) {
+    this.ctx.font = "36px Arial";
+    this.ctx.fillText(player.name + " is the winner!", this.canvas.width/3, this.canvas.height/2);
+  }
+
   checkAttack(player: Player) {
     this.players.filter((tempPlayer) => {
       return player.name != tempPlayer.name;
@@ -139,6 +168,8 @@ export class Game {
         });
         if(alivePlayers == 1) {
           console.log(player.name + " is the winner!");
+          this.isActive = false;
+          this.printWinner(player);
         }
       }
     });

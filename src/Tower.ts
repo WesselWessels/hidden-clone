@@ -14,7 +14,7 @@ export class Tower {
   constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: PlayerPosition) {
     this.canvas = canvas;
     this.ctx = ctx;
-    this.position = position;
+    this.position = {x: position.x - TOWER_WIDTH/2, y: position.y - TOWER_HEIGHT/2};
   }
 
   draw() {
