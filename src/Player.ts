@@ -3,6 +3,7 @@ export interface PlayerKeys {
   right: string,
   up: string,
   down: string,
+  attack: string
 }
 
 export enum PlayerDirection {
@@ -21,10 +22,43 @@ export interface PlayerPosition {
   y: number
 }
 
-const PLAYER_WIDTH = 25;
-const PLAYER_HEIGHT = 50;
+export const PLAYER_WIDTH = 35;
+export const PLAYER_HEIGHT = 2 * PLAYER_WIDTH;
 const cos45 = 0.7071067;
+const player = require('./assets/character_malePerson_walk0.png');
+const playerAttack = require('./assets/character_malePerson_attack0.png');
+let playerImage = document.createElement('img');
+playerImage.src = player;
+let playerAttackImage = document.createElement('img');
+playerAttackImage.src = playerAttack;
 
+const CHARACTER_ARRAY = ['femaleAdventurer', 'femalePerson', 'maleAdventurer', 'malePerson', 'robot', 'zombie'];
+const NUMBER_OF_WALKS = 8;
+const NUMBER_OF_ATTACKS = 3;
+const CHARACTER_IMAGES = {};
+CHARACTER_ARRAY.forEach((character: string) => {
+  const walks = [];
+  const attacks = [];
+  for(let i = 0; i < NUMBER_OF_WALKS; i++) {
+    let image = document.createElement('img');
+    image.src = require(`./assets/character_${character}_walk${i}.png`);
+    walks.push(image);
+  }
+  let idleImage = document.createElement('img');
+  idleImage.src = require(`./assets/character_${character}_idle.png`);
+
+  for(let i = 0; i < NUMBER_OF_ATTACKS; i++) {
+    let attackImage = document.createElement('img');
+    attackImage.src = require(`./assets/character_${character}_attack${i}.png`);
+    attacks.push(attackImage);
+  }
+
+  let hurtImage = document.createElement('img');
+  hurtImage.src = require(`./assets/character_${character}_hurt.png`);  
+  CHARACTER_IMAGES[character] = {walks: walks, idle: idleImage, attacks: attacks, hurt: hurtImage};
+});
+
+const KEYFRAME_DURATION = 80;
 
 export class Player {
   playerKeys: PlayerKeys;
@@ -36,12 +70,22 @@ export class Player {
   isMoving: boolean;
   playerColor: string;
   botStarted: boolean;
+  previousTower: number;
+  score: number;
+  name: string;
+  isAttacking: boolean;
+  isAlive: boolean;
+  character: string;
+  characterImage: HTMLImageElement;
+  private walkKeyFrameIndex;
+  private attackKeyFrameIndex;
+  private lastKeyFrameTimeStamp;
 
   static GetRandomPlayerDirection() {
     return Math.floor(Math.random() * 8);
   }
 
-  constructor(human: boolean, playerKeys: PlayerKeys | null, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
+  constructor(human: boolean, name: string, playerKeys: PlayerKeys | null, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
     this.human = human;
     this.playerKeys = playerKeys;
     this.playerDirection = Player.GetRandomPlayerDirection();
@@ -50,6 +94,17 @@ export class Player {
     this.botStarted = false;
     this.isMoving = false;
     this.playerColor = '#'+(Math.random()*0xFFFFFF<<0).toString(16);
+    this.previousTower = null;
+    this.score = 0;
+    this.name = name;
+    this.isAttacking = false;
+    this.isAlive = true;
+    
+    this.character = CHARACTER_ARRAY[Math.floor(Math.random() * CHARACTER_ARRAY.length)];
+    this.walkKeyFrameIndex = 0;
+    this.attackKeyFrameIndex = 0;
+    this.lastKeyFrameTimeStamp = Date.now();
+    
 
     this.playerPosition = {
       x: Math.random() * this.canvas.width,
@@ -174,70 +229,102 @@ export class Player {
     }
   }
 
-  drawSword() {
-    let swordLength = 12;
-    let angleSwordLength = 12 * cos45;
-    let swordWidth = 3;
-    this.ctx.fillStyle = 'black';
-    this.ctx.beginPath();
-    this.ctx.lineWidth = swordWidth;
-    if(this.playerDirection == PlayerDirection.TOP) {
-      this.ctx.moveTo(this.playerPosition.x + (PLAYER_WIDTH/2), this.playerPosition.y);
-      this.ctx.lineTo(this.playerPosition.x + (PLAYER_WIDTH/2), this.playerPosition.y - swordLength);
-    } else if(this.playerDirection == PlayerDirection.DOWN) {
-      this.ctx.moveTo(this.playerPosition.x + (PLAYER_WIDTH/2), this.playerPosition.y + PLAYER_HEIGHT);
-      this.ctx.lineTo(this.playerPosition.x + (PLAYER_WIDTH/2), this.playerPosition.y + PLAYER_HEIGHT + swordLength);
-    } else if(this.playerDirection == PlayerDirection.LEFT) {
-      this.ctx.moveTo(this.playerPosition.x, this.playerPosition.y + PLAYER_HEIGHT/2);
-      this.ctx.lineTo(this.playerPosition.x - swordLength, this.playerPosition.y + PLAYER_HEIGHT/2);
-    } else if(this.playerDirection == PlayerDirection.RIGHT) {
-      this.ctx.moveTo(this.playerPosition.x + PLAYER_WIDTH, this.playerPosition.y + PLAYER_HEIGHT/2);
-      this.ctx.lineTo(this.playerPosition.x + PLAYER_WIDTH +  swordLength, this.playerPosition.y + PLAYER_HEIGHT/2);
-    } else if(this.playerDirection == PlayerDirection.TOP_LEFT) {
-      this.ctx.moveTo(this.playerPosition.x, this.playerPosition.y);
-      this.ctx.lineTo(this.playerPosition.x - angleSwordLength, this.playerPosition.y - angleSwordLength);
-    } else if(this.playerDirection == PlayerDirection.TOP_RIGHT) {
-      this.ctx.moveTo(this.playerPosition.x + PLAYER_WIDTH, this.playerPosition.y);
-      this.ctx.lineTo(this.playerPosition.x + PLAYER_WIDTH + angleSwordLength, this.playerPosition.y - angleSwordLength);
-    } else if(this.playerDirection == PlayerDirection.DOWN_LEFT) {
-      this.ctx.moveTo(this.playerPosition.x, this.playerPosition.y + PLAYER_HEIGHT);
-      this.ctx.lineTo(this.playerPosition.x - angleSwordLength, this.playerPosition.y + PLAYER_HEIGHT + angleSwordLength);
-    } else if(this.playerDirection == PlayerDirection.DOWN_RIGHT) {
-      this.ctx.moveTo(this.playerPosition.x + PLAYER_WIDTH, this.playerPosition.y + PLAYER_HEIGHT);
-      this.ctx.lineTo(this.playerPosition.x + PLAYER_WIDTH + angleSwordLength, this.playerPosition.y + PLAYER_HEIGHT + angleSwordLength);
+  addPoints(points: number) {
+    this.score = this.score + points;
+  }
+
+
+  getCurrentPlayerImage() {
+    let now = Date.now();
+
+    if(!this.isAlive) {
+      return CHARACTER_IMAGES[this.character].hurt;
     }
-    this.ctx.stroke();
-    
-    // TOP:
-    // this.ctx.fillRect(this.playerPosition.x + (PLAYER_WIDTH/2), this.playerPosition.y - swordLength, swordWidth, swordLength );
+
+    if(this.isAttacking) {
+      if(now - this.lastKeyFrameTimeStamp > 300) {
+        this.attackKeyFrameIndex++;
+        this.lastKeyFrameTimeStamp = now;
+      }
+      if(this.attackKeyFrameIndex > NUMBER_OF_ATTACKS - 1) {
+        this.attackKeyFrameIndex = 0;
+      }
+      return CHARACTER_IMAGES[this.character].attacks[this.attackKeyFrameIndex];
+    }
+    if(this.isMoving) {
+      if(now - this.lastKeyFrameTimeStamp > KEYFRAME_DURATION) {
+        this.walkKeyFrameIndex++;
+        this.lastKeyFrameTimeStamp = now;
+      }
+      if(this.walkKeyFrameIndex > NUMBER_OF_WALKS - 1) {
+        this.walkKeyFrameIndex = 0;
+      }
+      return CHARACTER_IMAGES[this.character].walks[this.walkKeyFrameIndex];
+    }
+    this.walkKeyFrameIndex = 0;
+    this.attackKeyFrameIndex = 0;
+    return CHARACTER_IMAGES[this.character].idle;
   }
 
   draw() {
-    this.ctx.fillStyle = this.playerColor;
-    this.ctx.fillRect(this.playerPosition.x, this.playerPosition.y, 25, 50);
-    this.drawSword();
+    if(this.playerDirection == PlayerDirection.LEFT || this.playerDirection == PlayerDirection.DOWN_LEFT || this.playerDirection == PlayerDirection.TOP_LEFT) {
+      this.ctx.save();
+      this.ctx.scale(-1,1);
+      this.ctx.drawImage(this.getCurrentPlayerImage(), -1 * this.playerPosition.x, this.playerPosition.y, -1 * PLAYER_WIDTH, PLAYER_HEIGHT);
+      this.ctx.restore();
+    } else {
+      this.ctx.drawImage(this.getCurrentPlayerImage(), this.playerPosition.x, this.playerPosition.y, PLAYER_WIDTH, PLAYER_HEIGHT);
+    }
+    
   }
 
-  update(timeDifference: number, currentKeys: string[]) {
-    if(this.human) {
-      this.updateDirection(currentKeys);
-      this.updatePosition(timeDifference);
-      
-    } else {
-      // console.log("I AM BOT", this.botStarted);
-      // this.botStarted = true;
-      if(this.botStarted == false) {
-        this.botStarted = true;
-        this.updateBot();
-        setTimeout(() => {
-          // console.log("Setting", this.isMoving, this.playerDirection);
-          this.botStarted = false;
-        }, (Math.random() * 5000) + 100);
-      }
-      
-      this.updatePosition(timeDifference);
-      
+  kill() {
+    this.isAlive = false;
+    if(this.human == false) {
+      setTimeout(() => {
+        this.isAlive = true
+      }, 3000);
     }
+  }
+
+  checkAttack(currentKeys: string[], attacked?: () => void) {
+    // console.log(this.isAttacking);
+    if(this.isAttacking == false) {
+      if(currentKeys.indexOf(this.playerKeys.attack) >= 0) {
+        this.isAttacking = true;
+        if(attacked) {
+          attacked();
+        }
+
+        setTimeout(() => {
+          this.isAttacking = false;
+        }, 500);
+  
+      }
+    }
+  }
+
+  update(timeDifference: number, currentKeys: string[], attacked?: () => void) {
+    if(this.isAlive == true) {
+      if(this.human) {
+        this.updateDirection(currentKeys);
+        this.updatePosition(timeDifference);
+        this.checkAttack(currentKeys, attacked);
+        
+      } else {
+        if(this.botStarted == false) {
+          this.botStarted = true;
+          this.updateBot();
+          setTimeout(() => {
+            this.botStarted = false;
+          }, (Math.random() * 5000) + 100);
+        }
+        
+        this.updatePosition(timeDifference);
+        
+      }
+    }
+    
     this.draw();
   }
 
