@@ -11,6 +11,7 @@
   "devDependencies": {
     "@types/node": "^13.9.1",
     "base64-inline-loader": "^1.1.1",
+    "gh-pages": "^2.2.0",
     "ts-loader": "^6.2.1",
     "typescript": "^3.8.3",
     "webpack": "^4.42.0",
