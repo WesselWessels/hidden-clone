@@ -79,7 +79,7 @@ export class Game {
     }
     let difference = time - this.previousTime;
     if(difference < 1000/30) {
-      console.log("Skipping");
+      // console.log("Skipping");
       window.requestAnimationFrame(this.drawCurrentGameState.bind(this));
       return;
     }
@@ -105,18 +105,15 @@ export class Game {
       this.timeLeft = 0;
       if(this.isActive) {
         let winningPlayer;
-        this.players.forEach((player) => {
-          if(player.human) {
-            if(!winningPlayer) {
-              winningPlayer = player;
-            } else {
-              if(player.score > winningPlayer.score) {
-                winningPlayer = player;
-              }
-            }
-          }
+        let humans = this.players.filter((player: Player) => {return player.human});
+        humans.sort((a, b) => {
+          return b.score - a.score;
         });
+        if(humans[0].score != 0 && humans[0].score > humans[1].score) {
+          winningPlayer = humans[0];
+        }
         this.printWinner(winningPlayer)
+        
       }
       this.isActive = false;
     }
@@ -131,7 +128,7 @@ export class Game {
     this.ctx.font = "20px Arial";
     this.players.forEach((player: Player) => {
       if(player.human) {
-        this.ctx.fillStyle = player.isAlive ? 'green' : 'grey';
+        this.ctx.fillStyle = player.isAlive ? 'green' : 'black';
         this.ctx.fillText(player.name + ": " + player.score , (spacer * index) + 25, this.canvas.height - 10);
         index++;
       }
@@ -145,9 +142,9 @@ export class Game {
     this.ctx.fillText(displayScore.toString() , 10, 30);
   }
 
-  printWinner(player: Player) {
+  printWinner(player: Player|null) {
     this.ctx.font = "36px Arial";
-    this.ctx.fillText(player.name + " is the winner!", this.canvas.width/3, this.canvas.height/2);
+    this.ctx.fillText(player ? (player.name + " is the winner!") : 'It is a tie', this.canvas.width/3, this.canvas.height/2);
   }
 
   checkAttack(player: Player) {
@@ -187,7 +184,9 @@ export class Game {
       ) {
         player.previousTower = index;
         player.addPoints(1);
-        this.beep();
+        setTimeout(() => {
+          this.beep();
+        }, 100);
       }
     })
     

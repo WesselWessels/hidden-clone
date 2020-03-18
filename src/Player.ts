@@ -101,6 +101,7 @@ export class Player {
     this.isAlive = true;
     
     this.character = CHARACTER_ARRAY[Math.floor(Math.random() * CHARACTER_ARRAY.length)];
+    // this.character = CHARACTER_ARRAY[0];
     this.walkKeyFrameIndex = 0;
     this.attackKeyFrameIndex = 0;
     this.lastKeyFrameTimeStamp = Date.now();
@@ -114,7 +115,11 @@ export class Player {
 
   updateBot() {
     const edgePercentage = 0.2;
-    this.isMoving = Math.random() > 0.1 ? true : false;
+    if(this.isMoving = false) {
+      this.isMoving = true;
+    } else {
+      this.isMoving = Math.random() > 0.1 ? true : false;
+    }
     if(this.isMoving == false) {
       return;
     }
@@ -242,7 +247,7 @@ export class Player {
     }
 
     if(this.isAttacking) {
-      if(now - this.lastKeyFrameTimeStamp > 300) {
+      if(now - this.lastKeyFrameTimeStamp > 200) {
         this.attackKeyFrameIndex++;
         this.lastKeyFrameTimeStamp = now;
       }
@@ -251,6 +256,7 @@ export class Player {
       }
       return CHARACTER_IMAGES[this.character].attacks[this.attackKeyFrameIndex];
     }
+    this.attackKeyFrameIndex = 0;
     if(this.isMoving) {
       if(now - this.lastKeyFrameTimeStamp > KEYFRAME_DURATION) {
         this.walkKeyFrameIndex++;
@@ -262,20 +268,20 @@ export class Player {
       return CHARACTER_IMAGES[this.character].walks[this.walkKeyFrameIndex];
     }
     this.walkKeyFrameIndex = 0;
-    this.attackKeyFrameIndex = 0;
     return CHARACTER_IMAGES[this.character].idle;
   }
 
   draw() {
     let playerImage = this.getCurrentPlayerImage();
+    let playerDrawPosition = {x: Math.floor(this.playerPosition.x), y: Math.floor(this.playerPosition.y)};
     if(this.playerDirection == PlayerDirection.LEFT || this.playerDirection == PlayerDirection.DOWN_LEFT || this.playerDirection == PlayerDirection.TOP_LEFT) {
       this.ctx.save();
       this.ctx.scale(-1,1);
-      this.ctx.drawImage(playerImage, -1 * this.playerPosition.x, this.playerPosition.y - 5, -1 * PLAYER_WIDTH, PLAYER_HEIGHT);
+      this.ctx.drawImage(playerImage, -1 * playerDrawPosition.x, playerDrawPosition.y - 5, -1 * PLAYER_WIDTH, PLAYER_HEIGHT);
       this.ctx.restore();
     } else {
       // this.ctx.fillRect(this.playerPosition.x, this.playerPosition.y, PLAYER_WIDTH, PLAYER_HEIGHT);
-      this.ctx.drawImage(playerImage, this.playerPosition.x, this.playerPosition.y - 5, PLAYER_WIDTH, PLAYER_HEIGHT);
+      this.ctx.drawImage(playerImage, playerDrawPosition.x, playerDrawPosition.y - 5, PLAYER_WIDTH, PLAYER_HEIGHT);
     }
     
   }
@@ -317,9 +323,10 @@ export class Player {
         if(this.botStarted == false) {
           this.botStarted = true;
           this.updateBot();
+          let newBotUpdateTime = this.isMoving ? ((Math.random() * 5000) + 100) : ((Math.random() * 2000) + 100)
           setTimeout(() => {
             this.botStarted = false;
-          }, (Math.random() * 5000) + 100);
+          }, newBotUpdateTime);
         }
         
         this.updatePosition(timeDifference);
